@@ -4,19 +4,23 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
-	"os/exec"
+
 	"github.com/fatih/color"
+	cfginteraction "github.com/faxryzen/pr-updater/internal/cfg_interaction"
 )
 
 const (
-	//repo       = "git@github.com:Volgarenok/spbspu-anp-2025-5130904-50401.git"
 	fileFormat = ".csv"
 	timeLayout = "2006-01-02 15:04:05"
+)
+
+var (
 	queryM     = `
 	query {
-		repository(owner: "Volgarenok", name: "spbspu-anp-2025-5130904-50401") {
+		repository(owner: "Volgarenok", name: "spbspu-anp-2025-5130904-50004") {
 			pullRequests(states: MERGED, first: 100) {
 				nodes {
 					number
@@ -37,7 +41,7 @@ const (
 	`
 	queryO     = `
 	query {
-		repository(owner: "Volgarenok", name: "spbspu-anp-2025-5130904-50401") {
+		repository(owner: "Volgarenok", name: "spbspu-anp-2025-5130904-50004") {
 			pullRequests(states: OPEN, first: 100) {
 				nodes {
 					number
@@ -73,8 +77,12 @@ func convertTimeToMSK(oldTime string) string {
 func main() {
 	green := color.New(color.FgGreen, color.Bold)
 	cyan := color.New(color.FgCyan, color.Bold)
+	yellow := color.New(color.FgYellow, color.Bold)
 
-	tmpDir := "/tmp/prupdater"
+	tmpDir, err := os.MkdirTemp("", "prupdater-")
+	if err != nil {
+		log.Fatal(err)
+	}
 	os.MkdirAll(tmpDir, 0755)
 
 	tmpFile, err := os.CreateTemp(tmpDir, "prlist_*.csv")
@@ -83,6 +91,108 @@ func main() {
 	}
 	defer os.Remove(tmpFile.Name())
 	defer tmpFile.Close()
+
+	repos, err := cfginteraction.CfgReadRepoCSV()
+	if err != nil {
+		log.Println(err)
+
+		return
+	}
+
+	cyan.Println("Recent repositories:")
+	var repoCounter uint = 0
+
+	yellow.Println("0: Add new repo")
+	for i, str := range repos {
+		yellow.Printf("%d: %s by %s\n", i + 1, str[0], str[1])
+		repoCounter++;
+	}
+
+	var inputRepo uint
+	fmt.Print("> ")
+	_, err = fmt.Scanln(&inputRepo)
+	if err != nil {
+		log.Println("ERROR: scan error")
+
+		return
+	}
+
+	if inputRepo == 0 {
+		cyan.Println("Type repo name and owner (use space for separator)")
+		fmt.Print("> ")
+		var (
+			name  string
+			owner string
+		)
+		_, err = fmt.Scanln(&name, &owner)
+		if err != nil {
+			log.Println("ERROR: scan error")
+
+			return
+		}
+		inputNewRepo := []string{name, owner}
+		err = cfginteraction.CfgWriteRepoCSV(inputNewRepo)
+		if err != nil {
+			log.Println("ERROR: cfg goes wrong")
+
+			return
+		}
+		repoCounter++;
+		inputRepo = repoCounter
+	}
+
+	if inputRepo > repoCounter {
+		log.Println("ERROR: wrong number")
+
+		return
+	}
+
+	currentRepo := []string{repos[inputRepo - 1][0], repos[inputRepo - 1][1]}
+
+	var (
+	queryM     = `
+	query {
+		repository(owner: "` + currentRepo[1] + `", name: "` + currentRepo[0] + `") {
+			pullRequests(states: MERGED, first: 100) {
+				nodes {
+					number
+					title
+					author { login }
+					timelineItems(itemTypes: LABELED_EVENT, last: 10) {
+						nodes {
+							... on LabeledEvent {
+								createdAt
+								label { name }
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	`
+	queryO     = `
+	query {
+		repository(owner: "Volgarenok", name: "spbspu-anp-2025-5130904-50004") {
+			pullRequests(states: OPEN, first: 100) {
+				nodes {
+					number
+					title
+					author { login }
+					timelineItems(itemTypes: LABELED_EVENT, last: 10) {
+						nodes {
+							... on LabeledEvent {
+								createdAt
+								label { name }
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	`
+)
 
 	//номер;логин;лаб;лейбл/статус(fine,merged(fine уже есть),open(т.е fine нету но пр есть));когда был выдан fine (или null если не был)
 
@@ -161,16 +271,16 @@ func main() {
 	}
 	fmt.Println(string(output))
 
-	var input string
+	var inputGist string
 	fmt.Print("> ")
-	_, err = fmt.Scanln(&input)
+	_, err = fmt.Scanln(&inputGist)
 	if err != nil {
 		log.Println("ERROR: scan error")
 
 		return
 	}
 
-	output, err = exec.Command("gh", "gist", "view", "--files", input).Output()
+	output, err = exec.Command("gh", "gist", "view", "--files", inputGist).Output()
 	if err != nil {
 		log.Println("ERROR: no gist with this ID")
 
@@ -206,7 +316,7 @@ func main() {
 		return
 	}
 
-	cmd = exec.Command("gh", "gist", "edit", input, "--add", tmpFile.Name())
+	cmd = exec.Command("gh", "gist", "edit", inputGist, "--add", tmpFile.Name())
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("ERROR: %v", err)
@@ -218,7 +328,7 @@ func main() {
 
 	for i := range len(gistFiles) {
 		cyan.Printf("Removing %s\n", gistFiles[i])
-		cmd = exec.Command("gh", "gist", "edit", input, "--remove", gistFiles[i])
+		cmd = exec.Command("gh", "gist", "edit", inputGist, "--remove", gistFiles[i])
 		output, err = cmd.CombinedOutput()
 		if err != nil {
 			log.Printf("ERROR: %v", err)
