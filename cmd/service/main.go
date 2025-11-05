@@ -8,58 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fatih/color"
-	cfginteraction "github.com/faxryzen/pr-updater/internal/cfg_interaction"
+	"github.com/faxryzen/pr-updater/internal/cfgs"
+	"github.com/faxryzen/pr-updater/internal/fmtc"
 )
 
 const (
 	fileFormat = ".csv"
 	timeLayout = "2006-01-02 15:04:05"
-)
-
-var (
-	queryM     = `
-	query {
-		repository(owner: "Volgarenok", name: "spbspu-anp-2025-5130904-50004") {
-			pullRequests(states: MERGED, first: 100) {
-				nodes {
-					number
-					title
-					author { login }
-					timelineItems(itemTypes: LABELED_EVENT, last: 10) {
-						nodes {
-							... on LabeledEvent {
-								createdAt
-								label { name }
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	`
-	queryO     = `
-	query {
-		repository(owner: "Volgarenok", name: "spbspu-anp-2025-5130904-50004") {
-			pullRequests(states: OPEN, first: 100) {
-				nodes {
-					number
-					title
-					author { login }
-					timelineItems(itemTypes: LABELED_EVENT, last: 10) {
-						nodes {
-							... on LabeledEvent {
-								createdAt
-								label { name }
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	`
 )
 
 func convertTimeToMSK(oldTime string) string {
@@ -75,9 +30,7 @@ func convertTimeToMSK(oldTime string) string {
 }
 
 func main() {
-	green := color.New(color.FgGreen, color.Bold)
-	cyan := color.New(color.FgCyan, color.Bold)
-	yellow := color.New(color.FgYellow, color.Bold)
+
 
 	tmpDir, err := os.MkdirTemp("", "prupdater-")
 	if err != nil {
@@ -92,62 +45,12 @@ func main() {
 	defer os.Remove(tmpFile.Name())
 	defer tmpFile.Close()
 
-	repos, err := cfginteraction.CfgReadRepoCSV()
+	currentRepo, err := cfgs.GetRepo()
 	if err != nil {
 		log.Println(err)
 
 		return
 	}
-
-	cyan.Println("Recent repositories:")
-	var repoCounter uint = 0
-
-	yellow.Println("0: Add new repo")
-	for i, str := range repos {
-		yellow.Printf("%d: %s by %s\n", i + 1, str[0], str[1])
-		repoCounter++;
-	}
-
-	var inputRepo uint
-	fmt.Print("> ")
-	_, err = fmt.Scanln(&inputRepo)
-	if err != nil {
-		log.Println("ERROR: scan error")
-
-		return
-	}
-
-	if inputRepo == 0 {
-		cyan.Println("Type repo name and owner (use space for separator)")
-		fmt.Print("> ")
-		var (
-			name  string
-			owner string
-		)
-		_, err = fmt.Scanln(&name, &owner)
-		if err != nil {
-			log.Println("ERROR: scan error")
-
-			return
-		}
-		inputNewRepo := []string{name, owner}
-		err = cfginteraction.CfgWriteRepoCSV(inputNewRepo)
-		if err != nil {
-			log.Println("ERROR: cfg goes wrong")
-
-			return
-		}
-		repoCounter++;
-		inputRepo = repoCounter
-	}
-
-	if inputRepo > repoCounter {
-		log.Println("ERROR: wrong number")
-
-		return
-	}
-
-	currentRepo := []string{repos[inputRepo - 1][0], repos[inputRepo - 1][1]}
 
 	var (
 	queryM     = `
@@ -173,7 +76,7 @@ func main() {
 	`
 	queryO     = `
 	query {
-		repository(owner: "Volgarenok", name: "spbspu-anp-2025-5130904-50004") {
+		repository(owner: "` + currentRepo[1] + `", name: "` + currentRepo[0] + `") {
 			pullRequests(states: OPEN, first: 100) {
 				nodes {
 					number
@@ -196,7 +99,7 @@ func main() {
 
 	//номер;логин;лаб;лейбл/статус(fine,merged(fine уже есть),open(т.е fine нету но пр есть));когда был выдан fine (или null если не был)
 
-	cyan.Println("Getting list of Pull Requests from github repo...")
+	fmtc.Cyan.Println("Getting list of Pull Requests from github repo \"" + currentRepo[0] + "\"...")
 
 	cmd := exec.Command("gh", "api", "graphql", "-f", fmt.Sprintf("query=%s", queryM), "--jq",
 											`.data.repository.pullRequests.nodes[] | [
@@ -258,9 +161,7 @@ func main() {
 		allData += "\n"
 	}
 
-	//fmt.Println(allData)
-
-	cyan.Println("Choose one of the gists to edit (copy ID) OR leave empty if you want to create new")
+	fmtc.Cyan.Println("Choose one of the gists to edit (copy ID) OR leave empty if you want to create new")
 	fmt.Println()
 
 	output, err = exec.Command("gh", "gist", "list").Output()
@@ -292,12 +193,12 @@ func main() {
 
 	gistFiles := []string{}
 
-	green.Println("Founded files in gist:")
+	fmtc.Green.Println("Founded files in gist:")
 
 	for _, line := range lines {
 		if strings.Contains(line, fileFormat) {
 			gistFiles = append(gistFiles, line)
-			cyan.Println(line)
+			fmtc.Cyan.Println(line)
 		}
 	}
 
@@ -324,10 +225,10 @@ func main() {
 		return
 	}
 
-	green.Println("Successfully added " + tmpFile.Name())
+	fmtc.Green.Println("Successfully added " + tmpFile.Name())
 
 	for i := range len(gistFiles) {
-		cyan.Printf("Removing %s\n", gistFiles[i])
+		fmtc.Cyan.Printf("Removing %s\n", gistFiles[i])
 		cmd = exec.Command("gh", "gist", "edit", inputGist, "--remove", gistFiles[i])
 		output, err = cmd.CombinedOutput()
 		if err != nil {
@@ -337,5 +238,5 @@ func main() {
 		}
 	}
 
-	green.Println("Done!")
+	fmtc.Green.Println("Done!")
 }
