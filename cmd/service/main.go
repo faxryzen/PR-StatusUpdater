@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"time"
 
 	"github.com/faxryzen/pr-updater/internal/cfgs"
 	"github.com/faxryzen/pr-updater/internal/fmtc"
@@ -14,20 +13,9 @@ import (
 
 const (
 	fileFormat = ".csv"
-	timeLayout = "2006-01-02 15:04:05"
 )
 
-func convertTimeToMSK(oldTime string) string {
-	oldTime = strings.ReplaceAll(oldTime, "T", " ")
-	oldTime = strings.ReplaceAll(oldTime, "Z", "")
 
-	newTime, err := time.Parse(timeLayout, oldTime)
-	if err != nil {
-		return "null"
-	}
-
-	return newTime.Format("2006.01.02 15:04:05")
-}
 
 func main() {
 
@@ -52,64 +40,21 @@ func main() {
 		return
 	}
 
-	var (
-	queryM     = `
-	query {
-		repository(owner: "` + currentRepo[1] + `", name: "` + currentRepo[0] + `") {
-			pullRequests(states: MERGED, first: 100) {
-				nodes {
-					number
-					title
-					author { login }
-					timelineItems(itemTypes: LABELED_EVENT, last: 10) {
-						nodes {
-							... on LabeledEvent {
-								createdAt
-								label { name }
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	`
-	queryO     = `
-	query {
-		repository(owner: "` + currentRepo[1] + `", name: "` + currentRepo[0] + `") {
-			pullRequests(states: OPEN, first: 100) {
-				nodes {
-					number
-					title
-					author { login }
-					timelineItems(itemTypes: LABELED_EVENT, last: 10) {
-						nodes {
-							... on LabeledEvent {
-								createdAt
-								label { name }
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	`
-)
+	querys := cfgs.GetQuerys(currentRepo)
 
-	//номер;логин;лаб;лейбл/статус(fine,merged(fine уже есть),open(т.е fine нету но пр есть));когда был выдан fine (или null если не был)
+	//номер;логин;лаб;время_открытия_pr;время_fine/время_merge
 
 	fmtc.Cyan.Println("Getting list of Pull Requests from github repo \"" + currentRepo[0] + "\"...")
 
-	cmd := exec.Command("gh", "api", "graphql", "-f", fmt.Sprintf("query=%s", queryM), "--jq",
+	cmd := exec.Command("gh", "api", "graphql", "-f", fmt.Sprintf("query=%s", querys[0]), "--jq",
 											`.data.repository.pullRequests.nodes[] | [
 											.number,
 											.author.login,
 											(.title | split("/") | .[1]),
-											"merged",
+											.createdAt,
 											(if any(.timelineItems.nodes[]; .label.name == "fine") 
-											then last(.timelineItems.nodes[] | select(.label.name == "fine").createdAt) 
-											else "null" end)
+											then last(.timelineItems.nodes[] | select(.label.name == "fine").createdAt)
+											else (.mergedAt // "null") end)
 											] | @csv`)
 
 	output, err := cmd.CombinedOutput()
@@ -122,14 +67,14 @@ func main() {
 	prListMerged := strings.ReplaceAll(string(output), "\"", "")
 	prListMerged = strings.ReplaceAll(prListMerged, ",", ";")
 
-	cmd = exec.Command("gh", "api", "graphql", "-f", fmt.Sprintf("query=%s", queryO), "--jq",
+	cmd = exec.Command("gh", "api", "graphql", "-f", fmt.Sprintf("query=%s", querys[1]), "--jq",
 											`.data.repository.pullRequests.nodes[] | [
 											.number,
 											.author.login,
 											(.title | split("/") | .[1]),
-											"open",
-											(if any(.timelineItems.nodes[]; .label.name == "fine") 
-											then last(.timelineItems.nodes[] | select(.label.name == "fine").createdAt) 
+											.createdAt,
+											(if any(.timelineItems.nodes[]; .label.name == "fine")
+											then last(.timelineItems.nodes[] | select(.label.name == "fine").createdAt)
 											else "null" end)
 											] | @csv`)
 
@@ -144,22 +89,10 @@ func main() {
 	prListOpened = strings.ReplaceAll(prListOpened, ",", ";")
 
 	allDataRaw := prListMerged + prListOpened
-	var allData string
 
-	lines := strings.Split(string(allDataRaw), "\n")
+	allData, err := cfgs.TransformPenaltyData(allDataRaw, 2, 3)
 
-	for _, line := range lines {
-		if line == "" {
-			continue
-		}
-		parts := strings.Split(line, ";")
-		parts[4] = convertTimeToMSK(parts[4])
-		allData += parts[0]
-		for i := 1; i < 5; i++ {
-			allData += ";" + parts[i]
-		}
-		allData += "\n"
-	}
+	fmt.Println(allData)
 
 	fmtc.Cyan.Println("Choose one of the gists to edit (copy ID) OR leave empty if you want to create new")
 	fmt.Println()
@@ -189,7 +122,7 @@ func main() {
 	}
 
 	viewPr := string(output)
-	lines = strings.Split(viewPr, "\n")
+	lines := strings.Split(viewPr, "\n")
 
 	gistFiles := []string{}
 

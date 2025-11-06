@@ -1,54 +1,14 @@
 package cfgs
 
 import (
-	"encoding/csv"
 	"fmt"
-	"os"
 	"github.com/faxryzen/pr-updater/internal/fmtc"
 )
-
-const configFilepath = "configs/"
-
-//Открывает repos.csv из папки конфигов, возвращает записи
-func scanRecords() ([][]string, error) {
-	file, err := os.Open(configFilepath + "repos.csv")
-	if err != nil {
-		if os.IsNotExist(err) {
-			return [][]string{}, nil
-		}
-		return nil, fmt.Errorf("ERROR: failed to open cfg: %w", err)
-	}
-	defer file.Close()
-
-	reader := csv.NewReader(file)
-	records, err := reader.ReadAll()
-	if err != nil {
-		return nil, fmt.Errorf("ERROR: invalid cfg: %w", err)
-	}
-
-	return records, nil
-}
-
-func writeRecords(records [][]string) error {
-	file, err := os.Create(configFilepath + "repos.csv")
-	if err != nil {
-		return fmt.Errorf("ERROR: failed to create file: %w", err)
-	}
-	defer file.Close()
-
-	writer := csv.NewWriter(file)
-	if err := writer.WriteAll(records); err != nil {
-		return fmt.Errorf("ERROR: failed to write records: %w", err)
-	}
-
-	writer.Flush()
-	return writer.Error()
-}
 
 //Функция с консольным взаимодействием,
 //возвращает два элемента, первый - репо, второй - автор
 func GetRepo() ([]string, error) {
-	records, err := scanRecords()
+	records, err := ScanRecords("repos.csv")
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +69,7 @@ func GetRepo() ([]string, error) {
 		records = append([][]string{record}, records...)
 	}
 
-	if err := writeRecords(records); err != nil {
+	if err := WriteRecords(records, "repos.csv"); err != nil {
 		return nil, err
 	}
 
