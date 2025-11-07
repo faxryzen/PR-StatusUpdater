@@ -90,9 +90,7 @@ func main() {
 
 	allDataRaw := prListMerged + prListOpened
 
-	allData, err := cfgs.TransformPenaltyData(allDataRaw, 2, 3)
-
-	fmt.Println(allData)
+	allData := cfgs.TransformPenaltyData(allDataRaw, 2, 3)
 
 	fmtc.Cyan.Println("Choose one of the gists to edit (copy ID) OR leave empty if you want to create new")
 	fmt.Println()
