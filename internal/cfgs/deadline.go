@@ -10,6 +10,7 @@ import (
 const (
 	cfgTimeLayout = "02.01.2006"
 	//newTimeLayout = "01.02.2006 15:04:05"
+	defaultScore = 5
 )
 
 func stringToMoscowTime(oldTime string) (time.Time, error) {
@@ -81,7 +82,7 @@ func calcPenalty(dds []time.Time, atsStr []string) string {
 	for _, at := range atsStr {
 		t, err := stringToMoscowTime(at)
 		if err != nil {
-			return "x"
+			return "exist"
 		}
 		ats = append(ats, t)
 	}
@@ -94,6 +95,8 @@ func calcPenalty(dds []time.Time, atsStr []string) string {
 			}
 		}
 	}
+
+	penalty += defaultScore
 
 	return strconv.Itoa(penalty)
 }
