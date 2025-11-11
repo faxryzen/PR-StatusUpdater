@@ -42,7 +42,7 @@ func main() {
 
 	querys := cfgs.GetQuerys(currentRepo)
 
-	//номер;логин;лаб;время_открытия_pr;время_fine/время_merge
+	//номер;логин;лаб;подсчитанный_бал
 
 	fmtc.Cyan.Println("Getting list of Pull Requests from github repo \"" + currentRepo[0] + "\"...")
 

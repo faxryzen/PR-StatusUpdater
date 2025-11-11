@@ -13,6 +13,33 @@ const (
 	defaultScore = 5
 )
 
+//Считает штрафы на основе дедлайнов и конфига deadlines.csv
+func TransformPenaltyData(raw string, iLab uint, iTimes uint) string {
+	dds, err := getDeadlines()
+	if err != nil {
+		panic(err)
+	}
+
+	var data string
+
+	lines := strings.Split(string(raw), "\n")
+
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		parts := strings.Split(line, ";")
+
+		pen := calcPenalty(dds[strings.ToUpper(parts[iLab])], parts[iTimes:])
+		for i := 0; i < len(parts) - 2; i++ {
+			data += parts[i] + ";"
+		}
+		data += pen + "\n"
+	}
+
+	return data
+}
+
 func stringToMoscowTime(oldTime string) (time.Time, error) {
 	newTime, err := time.Parse(time.RFC3339, oldTime)
 	if err != nil {
@@ -49,33 +76,6 @@ func getDeadlines() (map[string][]time.Time, error) {
 	return dds, nil
 }
 
-//Считает штрафы на основе дедлайнов и конфига deadlines.csv
-func TransformPenaltyData(raw string, iLab uint, iTimes uint) string {
-	dds, err := getDeadlines()
-	if err != nil {
-		panic(err)
-	}
-
-	var data string
-
-	lines := strings.Split(string(raw), "\n")
-
-	for _, line := range lines {
-		if line == "" {
-			continue
-		}
-		parts := strings.Split(line, ";")
-
-		pen := calcPenalty(dds[parts[iLab]], parts[iTimes:])
-		for i := 0; i < len(parts) - 2; i++ {
-			data += parts[i] + ";"
-		}
-		data += pen + "\n"
-	}
-
-	return data
-}
-
 func calcPenalty(dds []time.Time, atsStr []string) string {
 
 	ats := []time.Time{}
@@ -87,7 +87,8 @@ func calcPenalty(dds []time.Time, atsStr []string) string {
 		ats = append(ats, t)
 	}
 
-	penalty := +1
+	penalty := +2
+
 	for _, dd := range dds {
 		for _, at := range ats {
 			if at.After(dd) {
