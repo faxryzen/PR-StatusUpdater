@@ -1,43 +1,30 @@
 package cfgs
 
 import (
-	"time"
-	"strings"
+	"encoding/json"
 	"fmt"
-	"strconv"
+	"os"
+	"strings"
+	"time"
 )
 
 const (
 	cfgTimeLayout = "02.01.2006"
-	//newTimeLayout = "01.02.2006 15:04:05"
-	defaultScore = 5
 )
 
-//Считает штрафы на основе дедлайнов и конфига deadlines.csv
-func TransformPenaltyData(raw string, iLab uint, iTimes uint) string {
-	dds, err := getDeadlines()
-	if err != nil {
-		panic(err)
-	}
+type DeadlinesConfig struct {
+	Labs      []Lab `json:"labs"`
+}
 
-	var data string
+type Lab struct {
+	ID        string      `json:"id"`
+	BaseScore int         `json:"base_score"`
+	Deadlines []time.Time `json:"deadlines"`
+}
 
-	lines := strings.Split(string(raw), "\n")
-
-	for _, line := range lines {
-		if line == "" {
-			continue
-		}
-		parts := strings.Split(line, ";")
-
-		pen := calcPenalty(dds[strings.ToUpper(parts[iLab])], parts[iTimes:])
-		for i := 0; i < len(parts) - 2; i++ {
-			data += parts[i] + ";"
-		}
-		data += pen + "\n"
-	}
-
-	return data
+func ToMoscow(t time.Time) time.Time {
+	loc, _ := time.LoadLocation("Europe/Moscow")
+	return t.In(loc)
 }
 
 func stringToMoscowTime(oldTime string) (time.Time, error) {
@@ -54,50 +41,68 @@ func stringToMoscowTime(oldTime string) (time.Time, error) {
 	return newTime, nil
 }
 
-func getDeadlines() (map[string][]time.Time, error) {
-	records, err := ScanRecords("deadlines.csv")
+func LoadDeadlines() (*DeadlinesConfig, map[string]Lab, error) {
+	data, err := os.ReadFile("deadlines.json")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	dds := make(map[string][]time.Time)
-
-	for _, line := range records {
-		temp := []time.Time{}
-		for i := 1; i < len(line); i++ {
-			t, err := time.Parse(cfgTimeLayout, line[i])
-			if err != nil {
-				break
-			}
-			temp = append(temp, t)
-		}
-		dds[strings.ToUpper(line[0])] = temp
+	var cfg DeadlinesConfig
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, nil, err
 	}
-	return dds, nil
+
+	labs := make(map[string]Lab)
+	for _, lab := range cfg.Labs {
+		labs[lab.ID] = lab
+	}
+
+	return &cfg, labs, nil
 }
 
-func calcPenalty(dds []time.Time, atsStr []string) string {
+func NormalizeDeadlines(labs map[string]Lab) {
+	loc, _ := time.LoadLocation("Europe/Moscow")
 
-	ats := []time.Time{}
-	for _, at := range atsStr {
-		t, err := stringToMoscowTime(at)
-		if err != nil {
-			return "exist"
+	for id, lab := range labs {
+		for i, d := range lab.Deadlines {
+			lab.Deadlines[i] = time.Date(
+				d.Year(), d.Month(), d.Day(),
+				d.Hour(), d.Minute(), 0, 0,
+				loc,
+			)
 		}
-		ats = append(ats, t)
+		labs[id] = lab
 	}
-
-	penalty := +2
-
-	for _, dd := range dds {
-		for _, at := range ats {
-			if at.After(dd) {
-				penalty--
-			}
-		}
-	}
-
-	penalty += defaultScore
-
-	return strconv.Itoa(penalty)
 }
+
+
+func ExtractLabID(title string) string {
+	parts := strings.Split(title, "/")
+	if len(parts) < 2 {
+		return ""
+	}
+	return parts[1]
+}
+
+func MatchLab(title string, labs map[string]Lab) (Lab, bool) {
+	id := ExtractLabID(title)
+	lab, ok := labs[id]
+	return lab, ok
+}
+
+func CalculateScore(lab Lab, mergedAt time.Time) int {
+	score := lab.BaseScore
+
+	for _, deadline := range lab.Deadlines {
+		if mergedAt.After(deadline) {
+			score--
+		}
+	}
+
+	if score < 0 {
+		score = 0
+	}
+
+	return score
+}
+
