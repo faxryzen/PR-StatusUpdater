@@ -2,7 +2,6 @@ package cfgs
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -27,29 +26,15 @@ func ToMoscow(t time.Time) time.Time {
 	return t.In(loc)
 }
 
-func stringToMoscowTime(oldTime string) (time.Time, error) {
-	newTime, err := time.Parse(time.RFC3339, oldTime)
+func LoadDeadlines() (map[string]Lab, error) {
+	data, err := os.ReadFile(configFilepath + "deadlines.json")
 	if err != nil {
-		return time.Time{}, fmt.Errorf("ERROR: failed to parse time: %w", err)
-	}
-
-	loc, err := time.LoadLocation("Europe/Moscow")
-	if err != nil {
-		panic("location invalid")
-	}
-	newTime = newTime.In(loc)
-	return newTime, nil
-}
-
-func LoadDeadlines() (*DeadlinesConfig, map[string]Lab, error) {
-	data, err := os.ReadFile("deadlines.json")
-	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var cfg DeadlinesConfig
 	if err := json.Unmarshal(data, &cfg); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	labs := make(map[string]Lab)
@@ -57,24 +42,8 @@ func LoadDeadlines() (*DeadlinesConfig, map[string]Lab, error) {
 		labs[lab.ID] = lab
 	}
 
-	return &cfg, labs, nil
+	return labs, nil
 }
-
-func NormalizeDeadlines(labs map[string]Lab) {
-	loc, _ := time.LoadLocation("Europe/Moscow")
-
-	for id, lab := range labs {
-		for i, d := range lab.Deadlines {
-			lab.Deadlines[i] = time.Date(
-				d.Year(), d.Month(), d.Day(),
-				d.Hour(), d.Minute(), 0, 0,
-				loc,
-			)
-		}
-		labs[id] = lab
-	}
-}
-
 
 func ExtractLabID(title string) string {
 	parts := strings.Split(title, "/")

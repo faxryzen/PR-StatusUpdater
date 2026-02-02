@@ -1,6 +1,5 @@
 package cfgs
 
-// Repo — явная структура
 type Repo struct {
 	Name  string
 	Owner string
