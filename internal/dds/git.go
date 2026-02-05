@@ -10,13 +10,14 @@ import (
 )
 
 type PullRequest struct {
-	Number  uint                 `json:"number"`
-	Author  string               `json:"author"`
-	LabID   string               `json:"labID"`
-	Times   map[string]time.Time `json:"times"` //created fined merged
-	Marks   []string             `json:"marks"`
-	Score   int                  `json:"score"`
-	Debug   string               `json:"debug"`
+	Number   uint                 `json:"number" csv:"number"`
+	Author   string               `json:"author" csv:"author"`
+	LabID    string               `json:"labID"  csv:"labID"`
+	Times    map[string]time.Time `json:"times"` //created fined merged
+	Marks    []string             `json:"marks"`
+	Score    int                  `json:"score"`
+	ScoreCSV string                              `csv:"score"`
+	Debug    string               `json:"debug"`
 }
 
 func toMoscow(t time.Time) time.Time {
@@ -52,6 +53,7 @@ func GetGraphQLForGit(repo Repository) (Queries, error) {
 type Repository struct {
 	Name string
 	Auth string
+	Gist string
 }
 
 func GetRepositories() ([]Repository, error) {
@@ -64,10 +66,11 @@ func GetRepositories() ([]Repository, error) {
 	records := strings.Split(string(data), "\n")
 	for _, repo := range records {
 		repoInfo := strings.Split(repo, ",")
-		if len(repoInfo) == 2 {
+		if len(repoInfo) == 3 {
 			repos = append(repos, Repository{
 				Name: repoInfo[0],
 				Auth: repoInfo[1],
+				Gist: repoInfo[2],
 			})
 		}
 	}
@@ -134,4 +137,16 @@ func GetPullRequests(query string) ([]PullRequest, error) {
 	}
 
 	return pullRequests, nil
+}
+
+func UploadGist(repo Repository) (error) {
+
+	cmd := exec.Command("gh", "gist", "edit", repo.Gist, "output/" + repo.Name + ".json")
+
+	_, err := cmd.CombinedOutput()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
