@@ -2,9 +2,8 @@ package dds
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
-	"strings"
+	"strconv"
 	"time"
 )
 
@@ -13,7 +12,7 @@ const (
 )
 
 type DeadlinesConfig struct {
-	Labs      []Lab `json:"labs"`
+	Labs []Lab `json:"labs"`
 }
 
 type Lab struct {
@@ -21,6 +20,16 @@ type Lab struct {
 	BaseScore       int         `json:"base_score"`
 	DeadlinesAccept []time.Time `json:"dds_acceptance"`
 	DeadlinesReady  []time.Time `json:"dds_readiness"`
+}
+
+type PullRequest struct {
+	Number  uint                 `json:"number"`
+	Author  string               `json:"author"`
+	LabID   string               `json:"labID"`
+	Times   map[string]time.Time `json:"times"` //created fined merged
+	Marks   []string             `json:"marks"`
+	Score   int                  `json:"score"`
+	Debug   string               `json:"debug"`
 }
 
 func ToMoscow(t time.Time) time.Time {
@@ -44,39 +53,52 @@ func LoadDeadlines() (map[string]Lab, error) {
 		labs[lab.ID] = lab
 	}
 
-	fmt.Println("===============================labs:")
-	fmt.Println(labs)
-
 	return labs, nil
 }
 
-func ExtractLabID(title string) string {
-	parts := strings.Split(title, "/")
-	if len(parts) < 2 {
-		return ""
-	}
-	return parts[1]
-}
+func CalculateScore(pr *PullRequest, cfg Lab) {
+	score := cfg.BaseScore
+	dds_acc := cfg.DeadlinesAccept
+	dds_red := cfg.DeadlinesReady
 
-func MatchLab(title string, labs map[string]Lab) (Lab, bool) {
-	id := ExtractLabID(title)
-	lab, ok := labs[id]
-	return lab, ok
-}
-
-func CalculateScore(lab Lab, mergedAt time.Time) int {
-	score := lab.BaseScore
-	/*
-	for _, deadline := range lab.Deadlines {
-		if mergedAt.After(deadline) {
+	for _, deadline := range dds_acc {
+		if pr.Times["created"].After(deadline) {
+			pr.Debug += "dd accept proeban; "
 			score--
 		}
 	}
-*/
+
+	fineOrMergeTime := pr.Times["fined"]
+
+	if _, ok := pr.Times["merged"]; ok {
+		if pr.Times["merged"].Before(pr.Times["fined"]) {
+
+			fineOrMergeTime = pr.Times["merged"]
+		}
+	}
+	for _, deadline := range dds_red {
+		if fineOrMergeTime.After(deadline) {
+			pr.Debug += "dd fine proeban; "
+			score--
+		}
+	}
+
+	marks := pr.Marks
+
+	for _, mStr := range marks {
+		mInt, err := strconv.Atoi(mStr)
+
+		if err != nil {
+			panic("there's no fucking way")
+		}
+
+		pr.Debug += "accept label: " + mStr + "; "
+		score += mInt
+	}
+
 	if score < 0 {
 		score = 0
 	}
 
-	return score
+	pr.Score = score
 }
-

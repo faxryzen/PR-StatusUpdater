@@ -1,15 +1,15 @@
 package bot
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"strings"
-	"time"
 
-	"github.com/joho/godotenv"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/joho/godotenv"
 
 	"github.com/faxryzen/pr-updater/internal/cfgs"
 	"github.com/faxryzen/pr-updater/internal/dds"
@@ -66,12 +66,12 @@ func (b *Bot) Run() {
 			continue
 
 			/*
-		case "Add Repo":
-			bot.Send(tgbotapi.NewMessage(
-				chatID,
-				"Используй:\n/addrepo owner name",
-			))
-			continue
+				case "Add Repo":
+					bot.Send(tgbotapi.NewMessage(
+						chatID,
+						"Используй:\n/addrepo owner name",
+					))
+					continue
 			*/
 		}
 
@@ -79,8 +79,8 @@ func (b *Bot) Run() {
 		case "start":
 			sendMainMenu(b.API, chatID)
 			/*
-		case "addrepo":
-			handleAddRepo(bot, update)
+				case "addrepo":
+					handleAddRepo(bot, update)
 			*/
 		default:
 			b.API.Send(tgbotapi.NewMessage(chatID, "Неизвестная команда"))
@@ -99,9 +99,9 @@ func sendMainMenu(bot *tgbotapi.BotAPI, chatID int64) {
 			tgbotapi.NewKeyboardButton("Update PR"),
 		),
 		/*
-		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton("Add Repo"),
-		),
+			tgbotapi.NewKeyboardButtonRow(
+				tgbotapi.NewKeyboardButton("Add Repo"),
+			),
 		*/
 	)
 	keyboard.ResizeKeyboard = true
@@ -120,11 +120,11 @@ func showRepoButtons(bot *tgbotapi.BotAPI, chatID int64) {
 
 	if len(repos) == 0 {
 		/*
-		bot.Send(tgbotapi.NewMessage(
-			chatID,
-			"Нет репозиториев.\nДобавь:\n/addrepo owner name",
-		))
-			*/
+			bot.Send(tgbotapi.NewMessage(
+				chatID,
+				"Нет репозиториев.\nДобавь:\n/addrepo owner name",
+			))
+		*/
 		return
 	}
 
@@ -142,6 +142,7 @@ func showRepoButtons(bot *tgbotapi.BotAPI, chatID int64) {
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 	bot.Send(msg)
 }
+
 /*
 func handleAddRepo(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 	chatID := update.Message.Chat.ID
@@ -169,35 +170,63 @@ func handleAddRepo(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 }
 */
 
-func runGhQuery(query string) (string, error) {
+func runGhQuery(query string) ([]dds.PullRequest, error) {
+	jqFilter, err := os.ReadFile("configs/pr_filter.jq")
+	if err != nil {
+		return nil, fmt.Errorf("failed to read jq filter: %w", err)
+	}
+
 	cmd := exec.Command(
 		"gh", "api", "graphql",
 		"-f", "query="+query,
-		"--jq", `.data.repository.pullRequests.nodes[] | [
-			.number,
-			.author.login,
-			(.title | split("/") | .[1]),
-			.createdAt,
-			(if any(.timelineItems.nodes[]; .label.name == "fine") 
-			then last(.timelineItems.nodes[] | select(.label.name == "fine").createdAt)
-			else (.mergedAt // "null") end)
-			] | @csv`)
+		"--jq", string(jqFilter))
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("%v: %s", err, out)
+		return nil, fmt.Errorf("%v: %s", err, out)
 	}
 
-	fmt.Println("===================out:")
-	fmt.Println(out)
+	if len(out) == 0 {
+		return []dds.PullRequest{}, nil
+	}
 
-	res := strings.ReplaceAll(string(out), "\"", "")
-	res = strings.ReplaceAll(res, ",", ";")
+	var pullRequests []dds.PullRequest
+	lines := strings.Split(string(out), "\n")
 
-	fmt.Println("===================res:")
-	fmt.Println(res)
+	for _, line := range lines {
 
-	return res, nil
+		if line == "" {
+			continue
+		}
+
+		var pr dds.PullRequest
+
+		err = json.Unmarshal([]byte(line), &pr)
+		if err != nil {
+			panic("what da hell")
+		}
+
+		if pr.LabID == "" {
+			continue
+		}
+
+		pr.Times["created"] = dds.ToMoscow(pr.Times["created"])
+
+		if pr.Times["fined"].IsZero() {
+			delete(pr.Times, "fined")
+		} else {
+			pr.Times["fined"] = dds.ToMoscow(pr.Times["fined"])
+		}
+		if pr.Times["merged"].IsZero() {
+			delete(pr.Times, "merged")
+		} else {
+			pr.Times["merged"] = dds.ToMoscow(pr.Times["merged"])
+		}
+
+		pullRequests = append(pullRequests, pr)
+	}
+
+	return pullRequests, nil
 }
 
 func handleCallback(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
@@ -240,15 +269,19 @@ func handleUpdate(bot *tgbotapi.BotAPI, chatID int64, repo cfgs.Repo) {
 		repo.Owner,
 	})
 
-	mergedRaw, err := runGhQuery(querys[0])
+	mergedPRs, err := runGhQuery(querys[0])
 	if err != nil {
 		sendErr(bot, chatID, err)
 		return
 	}
 
-	lines := strings.Split(mergedRaw, "\n")
+	openedPRs, err := runGhQuery(querys[1])
+	if err != nil {
+		sendErr(bot, chatID, err)
+		return
+	}
 
-	tmpFile, err := os.CreateTemp("", "pr_*.csv")
+	tmpFile, err := os.CreateTemp("", "pr_*.json")
 	if err != nil {
 		sendErr(bot, chatID, err)
 		return
@@ -256,43 +289,15 @@ func handleUpdate(bot *tgbotapi.BotAPI, chatID int64, repo cfgs.Repo) {
 	defer os.Remove(tmpFile.Name())
 	defer tmpFile.Close()
 
-	tmpFile.WriteString("PR;User;Lab;Score\n")
-
-	for _, line := range lines {
-		if line == "" {
-			continue
-		}
-
-		parts := strings.Split(line, ";")
-		if len(parts) < 5 {
-			continue
-		}
-
-		title := parts[2]
-		lab, ok := dds.MatchLab(title, labs)
-		if !ok {
-			continue
-		}
-
-		mergedAtUTC, err := time.Parse(time.RFC3339, parts[4])
-		if err != nil {
-			continue
-		}
-
-		mergedAt := dds.ToMoscow(mergedAtUTC)
-
-		score := dds.CalculateScore(lab, mergedAt)
-
-		row := fmt.Sprintf(
-			"%s;%s;%s;%d\n",
-			parts[0], // PR number
-			parts[1], // user
-			lab.ID,
-			score,
-		)
-
-		tmpFile.WriteString(row)
+	for i := range mergedPRs {
+		dds.CalculateScore(&mergedPRs[i], labs[mergedPRs[i].LabID])
 	}
+
+	j, err := json.MarshalIndent(append(mergedPRs, openedPRs...), "", " ")
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	tmpFile.Write(j)
 
 	doc := tgbotapi.NewDocument(chatID, tgbotapi.FilePath(tmpFile.Name()))
 	doc.Caption = "Готово: " + repo.Owner + "/" + repo.Name

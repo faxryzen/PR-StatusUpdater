@@ -21,6 +21,9 @@ var (
 							}
 						}
 					}
+					labels(first: 10) {
+						nodes {	name }
+					}
 				}
 			}
 		}
@@ -42,6 +45,9 @@ var (
 								label { name }
 							}
 						}
+					}
+					labels(first: 10) {
+						nodes {	name }
 					}
 				}
 			}
