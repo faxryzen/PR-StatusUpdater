@@ -1,0 +1,24 @@
+query {
+  repository(owner: "$owner", name: "$name") {
+    pullRequests(states: MERGED, first: 100) {
+      nodes {
+        number
+        title
+        author { login }
+        mergedAt
+        createdAt
+        timelineItems(itemTypes: LABELED_EVENT, last: 10) {
+          nodes {
+            ... on LabeledEvent {
+              createdAt
+              label { name }
+            }
+          }
+        }
+        labels(first: 10) {
+          nodes { name }
+        }
+      }
+    }
+  }
+}

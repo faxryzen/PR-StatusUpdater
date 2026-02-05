@@ -1,17 +1,14 @@
 package bot
 
 import (
-	"encoding/json"
-	"fmt"
+	"errors"
 	"log"
 	"os"
-	"os/exec"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
 
-	"github.com/faxryzen/pr-updater/internal/cfgs"
 	"github.com/faxryzen/pr-updater/internal/dds"
 )
 
@@ -111,14 +108,17 @@ func sendMainMenu(bot *tgbotapi.BotAPI, chatID int64) {
 	bot.Send(msg)
 }
 
+var ErrEmptyRepos = errors.New("repos.csv is empty")
+
 func showRepoButtons(bot *tgbotapi.BotAPI, chatID int64) {
-	repos, err := cfgs.GetRepos()
+	repos, err := dds.GetRepositories()
 	if err != nil {
 		sendErr(bot, chatID, err)
 		return
 	}
 
 	if len(repos) == 0 {
+		sendErr(bot, chatID, ErrEmptyRepos)
 		/*
 			bot.Send(tgbotapi.NewMessage(
 				chatID,
@@ -132,8 +132,8 @@ func showRepoButtons(bot *tgbotapi.BotAPI, chatID int64) {
 
 	for _, r := range repos {
 		btn := tgbotapi.NewInlineKeyboardButtonData(
-			r.Owner+"/"+r.Name,
-			"repo:"+r.Owner+"/"+r.Name,
+			r.Auth + "/" + r.Name,
+			"repo:" + r.Auth + "/" + r.Name,
 		)
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(btn))
 	}
@@ -170,65 +170,6 @@ func handleAddRepo(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 }
 */
 
-func runGhQuery(query string) ([]dds.PullRequest, error) {
-	jqFilter, err := os.ReadFile("configs/pr_filter.jq")
-	if err != nil {
-		return nil, fmt.Errorf("failed to read jq filter: %w", err)
-	}
-
-	cmd := exec.Command(
-		"gh", "api", "graphql",
-		"-f", "query="+query,
-		"--jq", string(jqFilter))
-
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("%v: %s", err, out)
-	}
-
-	if len(out) == 0 {
-		return []dds.PullRequest{}, nil
-	}
-
-	var pullRequests []dds.PullRequest
-	lines := strings.Split(string(out), "\n")
-
-	for _, line := range lines {
-
-		if line == "" {
-			continue
-		}
-
-		var pr dds.PullRequest
-
-		err = json.Unmarshal([]byte(line), &pr)
-		if err != nil {
-			panic("what da hell")
-		}
-
-		if pr.LabID == "" {
-			continue
-		}
-
-		pr.Times["created"] = dds.ToMoscow(pr.Times["created"])
-
-		if pr.Times["fined"].IsZero() {
-			delete(pr.Times, "fined")
-		} else {
-			pr.Times["fined"] = dds.ToMoscow(pr.Times["fined"])
-		}
-		if pr.Times["merged"].IsZero() {
-			delete(pr.Times, "merged")
-		} else {
-			pr.Times["merged"] = dds.ToMoscow(pr.Times["merged"])
-		}
-
-		pullRequests = append(pullRequests, pr)
-	}
-
-	return pullRequests, nil
-}
-
 func handleCallback(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 	data := update.CallbackQuery.Data
 	chatID := update.CallbackQuery.Message.Chat.ID
@@ -237,9 +178,9 @@ func handleCallback(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 		repoStr := after
 		parts := strings.Split(repoStr, "/")
 
-		repo := cfgs.Repo{
-			Owner: parts[0],
-			Name:  parts[1],
+		repo := dds.Repository{
+			Auth: parts[0],
+			Name: parts[1],
 		}
 
 		callback := tgbotapi.NewCallback(
@@ -252,55 +193,28 @@ func handleCallback(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 	}
 }
 
-func handleUpdate(bot *tgbotapi.BotAPI, chatID int64, repo cfgs.Repo) {
+func handleUpdate(bot *tgbotapi.BotAPI, chatID int64, repo dds.Repository) {
 	bot.Send(tgbotapi.NewMessage(
 		chatID,
-		"Загружаю PR для "+repo.Owner+"/"+repo.Name,
+		"Загружаю PR для " + repo.Auth + "/" + repo.Name,
 	))
-
-	labs, err := dds.LoadDeadlines()
-	if err != nil {
-		sendErr(bot, chatID, err)
-		return
-	}
-
-	querys := cfgs.GetQuerys([]string{
-		repo.Name,
-		repo.Owner,
-	})
-
-	mergedPRs, err := runGhQuery(querys[0])
-	if err != nil {
-		sendErr(bot, chatID, err)
-		return
-	}
-
-	openedPRs, err := runGhQuery(querys[1])
-	if err != nil {
-		sendErr(bot, chatID, err)
-		return
-	}
 
 	tmpFile, err := os.CreateTemp("", "pr_*.json")
 	if err != nil {
 		sendErr(bot, chatID, err)
-		return
 	}
 	defer os.Remove(tmpFile.Name())
 	defer tmpFile.Close()
 
-	for i := range mergedPRs {
-		dds.CalculateScore(&mergedPRs[i], labs[mergedPRs[i].LabID])
+	j, err := dds.UnloadLabs(repo)
+	if err != nil {
+		sendErr(bot, chatID, err)
 	}
 
-	j, err := json.MarshalIndent(append(mergedPRs, openedPRs...), "", " ")
-	if err != nil {
-		fmt.Println("error:", err)
-	}
 	tmpFile.Write(j)
 
 	doc := tgbotapi.NewDocument(chatID, tgbotapi.FilePath(tmpFile.Name()))
-	doc.Caption = "Готово: " + repo.Owner + "/" + repo.Name
+	doc.Caption = "Готово: " + repo.Auth + "/" + repo.Name
 
 	bot.Send(doc)
 }
