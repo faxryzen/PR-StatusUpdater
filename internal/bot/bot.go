@@ -12,6 +12,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	"github.com/faxryzen/pr-updater/internal/cfgs"
+	"github.com/faxryzen/pr-updater/internal/dds"
 )
 
 type Bot struct {
@@ -175,19 +176,26 @@ func runGhQuery(query string) (string, error) {
 		"--jq", `.data.repository.pullRequests.nodes[] | [
 			.number,
 			.author.login,
-			.title,
+			(.title | split("/") | .[1]),
 			.createdAt,
-			.mergedAt
-		] | @csv`,
-	)
+			(if any(.timelineItems.nodes[]; .label.name == "fine") 
+			then last(.timelineItems.nodes[] | select(.label.name == "fine").createdAt)
+			else (.mergedAt // "null") end)
+			] | @csv`)
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("%v: %s", err, out)
 	}
 
+	fmt.Println("===================out:")
+	fmt.Println(out)
+
 	res := strings.ReplaceAll(string(out), "\"", "")
 	res = strings.ReplaceAll(res, ",", ";")
+
+	fmt.Println("===================res:")
+	fmt.Println(res)
 
 	return res, nil
 }
@@ -221,7 +229,7 @@ func handleUpdate(bot *tgbotapi.BotAPI, chatID int64, repo cfgs.Repo) {
 		"Загружаю PR для "+repo.Owner+"/"+repo.Name,
 	))
 
-	labs, err := cfgs.LoadDeadlines()
+	labs, err := dds.LoadDeadlines()
 	if err != nil {
 		sendErr(bot, chatID, err)
 		return
@@ -261,7 +269,7 @@ func handleUpdate(bot *tgbotapi.BotAPI, chatID int64, repo cfgs.Repo) {
 		}
 
 		title := parts[2]
-		lab, ok := cfgs.MatchLab(title, labs)
+		lab, ok := dds.MatchLab(title, labs)
 		if !ok {
 			continue
 		}
@@ -271,9 +279,9 @@ func handleUpdate(bot *tgbotapi.BotAPI, chatID int64, repo cfgs.Repo) {
 			continue
 		}
 
-		mergedAt := cfgs.ToMoscow(mergedAtUTC)
+		mergedAt := dds.ToMoscow(mergedAtUTC)
 
-		score := cfgs.CalculateScore(lab, mergedAt)
+		score := dds.CalculateScore(lab, mergedAt)
 
 		row := fmt.Sprintf(
 			"%s;%s;%s;%d\n",

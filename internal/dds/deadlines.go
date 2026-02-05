@@ -1,14 +1,15 @@
-package cfgs
+package dds
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"time"
 )
 
 const (
-	cfgTimeLayout = "02.01.2006"
+	configFilepath = "configs/"
 )
 
 type DeadlinesConfig struct {
@@ -16,9 +17,10 @@ type DeadlinesConfig struct {
 }
 
 type Lab struct {
-	ID        string      `json:"id"`
-	BaseScore int         `json:"base_score"`
-	Deadlines []time.Time `json:"deadlines"`
+	ID              string      `json:"id"`
+	BaseScore       int         `json:"base_score"`
+	DeadlinesAccept []time.Time `json:"dds_acceptance"`
+	DeadlinesReady  []time.Time `json:"dds_readiness"`
 }
 
 func ToMoscow(t time.Time) time.Time {
@@ -42,6 +44,9 @@ func LoadDeadlines() (map[string]Lab, error) {
 		labs[lab.ID] = lab
 	}
 
+	fmt.Println("===============================labs:")
+	fmt.Println(labs)
+
 	return labs, nil
 }
 
@@ -61,13 +66,13 @@ func MatchLab(title string, labs map[string]Lab) (Lab, bool) {
 
 func CalculateScore(lab Lab, mergedAt time.Time) int {
 	score := lab.BaseScore
-
+	/*
 	for _, deadline := range lab.Deadlines {
 		if mergedAt.After(deadline) {
 			score--
 		}
 	}
-
+*/
 	if score < 0 {
 		score = 0
 	}
