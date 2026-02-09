@@ -9,25 +9,30 @@ import (
 	"time"
 )
 
+type Queries struct {
+	MergedPRsQuery string
+	OpenPRsQuery   string
+}
+
+type Repository struct {
+	Name string
+	Auth string
+	Gist string
+}
+
 type PullRequest struct {
-	Number   uint                 `json:"number" csv:"number"`
-	Author   string               `json:"author" csv:"author"`
-	LabID    string               `json:"labID"  csv:"labID"`
+	Number   uint                 `json:"number"`
+	Author   string               `json:"author"`
+	LabID    string               `json:"labID"`
 	Times    map[string]time.Time `json:"times"` //created fined merged
 	Marks    []string             `json:"marks"`
 	Score    int                  `json:"score"`
-	ScoreCSV string                              `csv:"score"`
 	Debug    string               `json:"debug"`
 }
 
 func toMoscow(t time.Time) time.Time {
 	loc, _ := time.LoadLocation("Europe/Moscow")
 	return t.In(loc)
-}
-
-type Queries struct {
-	MergedPRsQuery string
-	OpenPRsQuery   string
 }
 
 func GetGraphQLForGit(repo Repository) (Queries, error) {
@@ -48,12 +53,6 @@ func GetGraphQLForGit(repo Repository) (Queries, error) {
 	openQuery = strings.ReplaceAll(openQuery, "$name", repo.Name)
 
 	return Queries{string(mergedQuery), string(openQuery)}, nil
-}
-
-type Repository struct {
-	Name string
-	Auth string
-	Gist string
 }
 
 func GetRepositories() ([]Repository, error) {
@@ -118,6 +117,8 @@ func GetPullRequests(query string) ([]PullRequest, error) {
 			continue
 		}
 
+		pr.LabID = strings.ToUpper(pr.LabID)
+
 		pr.Times["created"] = toMoscow(pr.Times["created"])
 
 		if pr.Times["fined"].IsZero() {
@@ -141,9 +142,14 @@ func GetPullRequests(query string) ([]PullRequest, error) {
 
 func UploadGist(repo Repository) (error) {
 
-	cmd := exec.Command("gh", "gist", "edit", repo.Gist, "output/" + repo.Name + ".json")
+	err := SaveJSONPullReqsAsCSV(repo.Name)
+	if err != nil {
+		return err
+	}
 
-	_, err := cmd.CombinedOutput()
+	cmd := exec.Command("gh", "gist", "edit", repo.Gist, "output/" + repo.Name + ".csv")
+
+	_, err = cmd.CombinedOutput()
 	if err != nil {
 		return err
 	}

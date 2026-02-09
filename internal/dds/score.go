@@ -11,7 +11,7 @@ func CalculateScore(pr *PullRequest, cfg Lab) {
 
 	for _, deadline := range dds_acc {
 		if pr.Times["created"].After(deadline) {
-			pr.Debug += "dd accept proeban; "
+			pr.Debug += "dd accept expired; "
 			score--
 		}
 	}
@@ -26,7 +26,7 @@ func CalculateScore(pr *PullRequest, cfg Lab) {
 	}
 	for _, deadline := range dds_red {
 		if fineOrMergeTime.After(deadline) {
-			pr.Debug += "dd fine proeban; "
+			pr.Debug += "dd fine expired; "
 			score--
 		}
 	}
