@@ -2,7 +2,14 @@
 
 Telegram bot for automating the collection and evaluation of Pull Requests from any git platform (GitHub, GitLab..)
 
-<img width="535" height="491" alt="image" src="https://github.com/user-attachments/assets/a87a1392-5b0f-440a-b22b-096c9c6be081" />
+<div align="center">
+  <b>Just two clicks:</b>
+  
+  <img width="535" height="491" alt="image" src="https://github.com/user-attachments/assets/a87a1392-5b0f-440a-b22b-096c9c6be081" />
+</div>
+
+**And then you get link:**
+<img width="546" height="436" alt="image" src="https://github.com/user-attachments/assets/afb5b470-75cd-463d-a3f0-0619b0849093" />
 
 ### What is it?
 
