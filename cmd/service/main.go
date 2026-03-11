@@ -10,8 +10,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-const botID = -1003870316764
-
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -21,6 +19,10 @@ func main() {
 
 	token := os.Getenv("TELEGRAM_BOT_TOKEN")
 	whitelist := os.Getenv("SETTINGS_WHITELIST")
+	id, err := strconv.ParseInt(os.Getenv("TELEGRAM_BOT_ID"), 10, 64)
+	if err != nil {
+		log.Fatal("Error parse botID from .env file")
+	}
 
 	adminsStr := strings.Split(whitelist, ",")
 	admins := []int64{}
@@ -33,6 +35,6 @@ func main() {
 	}
 	
 
-	bot := bot.Init(token, admins, botID)
+	bot := bot.Init(token, admins, id)
 	bot.Run()
 }

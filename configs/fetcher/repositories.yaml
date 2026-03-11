@@ -2,12 +2,20 @@
 - name: spbspu-anp-2025-5130901-51001
   auth: Volgarenok
   gist: 11a908b7a147fe0409ccc61f30031117
+  conf: github-volgarenok.yaml
 - name: spbspu-anp-2025-5130904-50402
   auth: Volgarenok
   gist: 2112581e8a19ddefc33fed7c267bda63
+  conf: github-volgarenok.yaml
 - name: spbspu-anp-2025-5130904-50401
   auth: Volgarenok
   gist: 0ae91d17a7bf70747c0ecfcd23feec68
+  conf: github-volgarenok.yaml
 - name: spbspu-anp-2025-5130904-50004
   auth: Volgarenok
   gist: e4fd103c9f6586e44e6470d6bb5674aa
+  conf: github-volgarenok.yaml
+- name: lets-go-programming-v2025-autumn-spbstu-40004
+  auth: lets-go-programming-contest
+  gist: 7228be14499239f47257cb21db925022
+  conf: github-artemii.yaml

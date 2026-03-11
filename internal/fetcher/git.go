@@ -78,6 +78,7 @@ type Repository struct {
 	Name string `yaml:"name"`
 	Auth string `yaml:"auth"`
 	Gist string `yaml:"gist"`
+	Cfg  string `yaml:"conf"`
 }
 
 func LoadRepositories() ([]Repository, error) {

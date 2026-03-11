@@ -39,7 +39,7 @@ func CalculateScore(pr *f.PullRequest, cfg Lab) {
 		mInt, err := strconv.Atoi(mStr)
 
 		if err != nil {
-			panic("there's no fucking way")
+			panic("there's no way")
 		}
 
 		pr.Debug += "accept label: " + mStr + "; "

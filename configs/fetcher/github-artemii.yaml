@@ -1,0 +1,6 @@
+platform: github
+github:
+  filter: artemii_filter.jq
+  queries:
+    merged: artemii_merged.graphql
+    open: artemii_open.graphql

@@ -1,0 +1,12 @@
+query {
+  repository(owner: "$owner", name: "$name") {
+    pullRequests(states: OPEN, first: 100) {
+      nodes {
+        number
+        title
+        author { login }
+        createdAt
+      }
+    }
+  }
+}
