@@ -19,10 +19,6 @@ func main() {
 
 	token := os.Getenv("TELEGRAM_BOT_TOKEN")
 	whitelist := os.Getenv("SETTINGS_WHITELIST")
-	id, err := strconv.ParseInt(os.Getenv("TELEGRAM_BOT_ID"), 10, 64)
-	if err != nil {
-		log.Fatal("Error parse botID from .env file")
-	}
 
 	adminsStr := strings.Split(whitelist, ",")
 	admins := []int64{}
@@ -35,6 +31,6 @@ func main() {
 	}
 	
 
-	bot := bot.Init(token, admins, id)
+	bot := bot.Init(token, admins)
 	bot.Run()
 }

@@ -17,11 +17,10 @@ type Bot struct {
 	API   *tgbotapi.BotAPI
 	Token string
 	Admin map[int64]bool
-	Chann int64
 	Repos []ft.Repository
 }
 
-func Init(token string, admins []int64, channel int64) *Bot {
+func Init(token string, admins []int64) *Bot {
 	repos, err := ft.LoadRepositories()
 	if err != nil {
 		log.Fatal(err)
@@ -34,7 +33,6 @@ func Init(token string, admins []int64, channel int64) *Bot {
 	return &Bot{
 		Token: token,
 		Admin: ads,
-		Chann: channel,
 		Repos: repos,
 	}
 }
