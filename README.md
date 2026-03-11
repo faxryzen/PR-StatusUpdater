@@ -1,3 +1,7 @@
+# About PR-StatusUpdater
+
+Telegram bot for automating the collection and evaluation of Pull Requests from any git platform (GitHub, GitLab..)
+
 ### What is it?
 
 This utility, in the form of a Telegram bot, can fetch pull requests from any git platform into a plain JSON, apply certain policies to them, and upload them as a gist/snippet for further export, for example, to Google Sheets as CSV (you get access to the raw data link).
