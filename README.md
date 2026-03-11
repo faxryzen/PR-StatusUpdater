@@ -2,6 +2,8 @@
 
 Telegram bot for automating the collection and evaluation of Pull Requests from any git platform (GitHub, GitLab..)
 
+<img width="535" height="491" alt="image" src="https://github.com/user-attachments/assets/a87a1392-5b0f-440a-b22b-096c9c6be081" />
+
 ### What is it?
 
 This utility, in the form of a Telegram bot, can fetch pull requests from any git platform into a plain JSON, apply certain policies to them, and upload them as a gist/snippet for further export, for example, to Google Sheets as CSV (you get access to the raw data link).
