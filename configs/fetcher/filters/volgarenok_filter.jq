@@ -1,7 +1,7 @@
 .data.repository.pullRequests.nodes[] | {
 	number: .number,
 	author: .author.login,
-	labID: (.title | split("/") | .[1]),
+	name: (.title | split("/") | .[1]),
 	times: {
 		created: .createdAt,
 		fined: (if (last(.timelineItems.nodes[] | select(.label.name == "fine").createdAt) // null) != null 

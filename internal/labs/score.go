@@ -1,10 +1,12 @@
-package dds
+package labs
 
 import (
 	"strconv"
+
+	f "github.com/faxryzen/pr-updater/internal/fetcher"
 )
 
-func CalculateScore(pr *PullRequest, cfg Lab) {
+func CalculateScore(pr *f.PullRequest, cfg Lab) {
 	score := cfg.BaseScore
 	dds_acc := cfg.DeadlinesAccept
 	dds_red := cfg.DeadlinesReady

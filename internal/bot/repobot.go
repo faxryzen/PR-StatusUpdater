@@ -1,32 +1,39 @@
 package bot
 
 import (
-	"errors"
-	"os"
+	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
-	"github.com/faxryzen/pr-updater/internal/dds"
+	"github.com/faxryzen/pr-updater/internal/labs"
+	ft "github.com/faxryzen/pr-updater/internal/fetcher"
 )
 
 type Bot struct {
 	API   *tgbotapi.BotAPI
 	Token string
+	Admin map[int64]bool
 	Chann int64
-	Repos []dds.Repository
+	Repos []ft.Repository
 }
 
-func Init(token string, channel int64) *Bot {
-	repos, err := dds.GetRepositories()
+func Init(token string, admins []int64, channel int64) *Bot {
+	repos, err := ft.LoadRepositories()
 	if err != nil {
 		log.Fatal(err)
+	}
+	ads := make(map[int64]bool)
+	for _, ad := range admins {
+		ads[ad] = true
 	}
 
 	return &Bot{
 		Token: token,
+		Admin: ads,
 		Chann: channel,
 		Repos: repos,
 	}
@@ -52,7 +59,7 @@ func (b *Bot) Run() {
 			handleCallback(b, update)
 			continue
 		}
-		//if we got msg
+		//ignore any non msg updates
 		if update.Message == nil {
 			continue
 		}
@@ -61,27 +68,22 @@ func (b *Bot) Run() {
 		text := update.Message.Text
 
 		switch text {
-		case "Update PR":
+		case "Run fetch":
 			showRepoButtons(b, chatID)
 			continue
-
-			/*
-				case "Add Repo":
-					bot.Send(tgbotapi.NewMessage(
-						chatID,
-						"Используй:\n/addrepo owner name",
-					))
-					continue
-			*/
+		case "Settings":
+			if b.Admin[chatID] {
+				showSettingsButtons(b, chatID)
+				continue
+			}
+			b.API.Send(tgbotapi.NewMessage(chatID, "У вас нет таких прав доступа"))
+			continue
 		}
 
 		switch update.Message.Command() {
 		case "start":
 			sendMainMenu(b.API, chatID)
-			/*
-				case "addrepo":
-					handleAddRepo(bot, update)
-			*/
+			log.Println(chatID)
 		default:
 			b.API.Send(tgbotapi.NewMessage(chatID, "Неизвестная команда"))
 		}
@@ -93,85 +95,11 @@ func sendErr(bot *tgbotapi.BotAPI, chatID int64, err error) {
 	bot.Send(tgbotapi.NewMessage(chatID, "Что-то пошло не так.."))
 }
 
-func sendMainMenu(bot *tgbotapi.BotAPI, chatID int64) {
-	keyboard := tgbotapi.NewReplyKeyboard(
-		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton("Update PR"),
-		),
-		/*
-			tgbotapi.NewKeyboardButtonRow(
-				tgbotapi.NewKeyboardButton("Add Repo"),
-			),
-		*/
-	)
-	keyboard.ResizeKeyboard = true
-
-	msg := tgbotapi.NewMessage(chatID, "Выбери действие:")
-	msg.ReplyMarkup = keyboard
-	bot.Send(msg)
-}
-
-var ErrEmptyRepos = errors.New("repos.csv is empty")
-
-func showRepoButtons(b *Bot, chatID int64) {
-	if len(b.Repos) == 0 {
-		sendErr(b.API, chatID, ErrEmptyRepos)
-		/*
-			bot.Send(tgbotapi.NewMessage(
-				chatID,
-				"Нет репозиториев.\nДобавь:\n/addrepo owner name",
-			))
-		*/
-		return
-	}
-
-	var rows [][]tgbotapi.InlineKeyboardButton
-
-	for i, r := range b.Repos {
-		btn := tgbotapi.NewInlineKeyboardButtonData(
-			r.Auth + "/" + r.Name,
-			"repo:" + strconv.Itoa(i),
-		)
-		rows = append(rows, tgbotapi.NewInlineKeyboardRow(btn))
-	}
-
-	msg := tgbotapi.NewMessage(chatID, "Выбери репозиторий:")
-	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
-
-	b.API.Send(msg)
-}
-
-/*
-func handleAddRepo(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
-	chatID := update.Message.Chat.ID
-	args := strings.Fields(update.Message.CommandArguments())
-
-	if len(args) != 2 {
-		bot.Send(tgbotapi.NewMessage(
-			chatID,
-			"Используй:\n/addrepo owner name",
-		))
-		return
-	}
-
-	repo := cfgs.Repo{
-		Owner: args[0],
-		Name:  args[1],
-	}
-
-	if err := cfgs.SaveRepo(repo); err != nil {
-		sendErr(bot, chatID, err)
-		return
-	}
-
-	bot.Send(tgbotapi.NewMessage(chatID, "Репозиторий сохранён"))
-}
-*/
-
 func handleCallback(bot *Bot, update tgbotapi.Update) {
 	data := update.CallbackQuery.Data
 	chatID := update.CallbackQuery.Message.Chat.ID
 
+	//fetch repo
 	if after, ok := strings.CutPrefix(data, "repo:"); ok {
 
 		repoIndex, err := strconv.Atoi(after)
@@ -185,8 +113,9 @@ func handleCallback(bot *Bot, update tgbotapi.Update) {
 		)
 		bot.API.Send(callback)
 
-		go handleUpdate(bot, chatID, repoIndex)
+		go handleFetch(bot, chatID, repoIndex)
 	}
+	//upload gist
 	if after, ok := strings.CutPrefix(data, "forward:"); ok {
 
 		repoIndex, err := strconv.Atoi(after)
@@ -194,7 +123,7 @@ func handleCallback(bot *Bot, update tgbotapi.Update) {
 			panic("it cant be str in forward: callback")
 		}
 
-		err = dds.UploadGist(bot.Repos[repoIndex])
+		err = ft.UploadCSVtoGist(bot.Repos[repoIndex])
 		if err != nil {
 			sendErr(bot.API, chatID, err)
 		}
@@ -205,9 +134,26 @@ func handleCallback(bot *Bot, update tgbotapi.Update) {
 		)
 		bot.API.Send(callback)
 	}
+	//settings
+	if after, ok := strings.CutPrefix(data, "settings:"); ok {
+		//setup repos
+		if after, ok := strings.CutPrefix(after, "repo:"); ok {
+			switch after {
+			case "init":
+				showSettingsRepoButtons(bot, chatID)
+			case "add":
+				fmt.Println("adding repo")
+			case "del":
+				fmt.Println("deleting repo")
+			}
+			
+			callback := tgbotapi.NewCallback(update.CallbackQuery.ID, "",)
+			bot.API.Send(callback)
+		}
+	}
 }
 
-func handleUpdate(bot *Bot, chatID int64, repoIndex int) {
+func handleFetch(bot *Bot, chatID int64, repoIndex int) {
 	repo := bot.Repos[repoIndex]
 
 	bot.API.Send(tgbotapi.NewMessage(
@@ -227,7 +173,7 @@ func handleUpdate(bot *Bot, chatID int64, repoIndex int) {
 	}
 	defer file.Close()
 
-	j, err := dds.UnloadLabs(repo)
+	j, err := labs.FetchLabsToJSON(repo)
 	if err != nil {
 		sendErr(bot.API, chatID, err)
 		return

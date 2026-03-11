@@ -1,4 +1,4 @@
-package dds
+package fetcher
 
 import (
 	"encoding/csv"
@@ -43,7 +43,7 @@ func SaveJSONPullReqsAsCSV(filename string) (error) {
 		row := []string{
 			strconv.FormatUint(uint64(pr.Number), 10),
 			pr.Author,
-			pr.LabID,
+			pr.Name,
 			csvScore,
 			pr.Debug,
 		}

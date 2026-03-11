@@ -1,0 +1,14 @@
+# GITHUB FETCH CONFIG EXAMPLE
+# WHAT PLATFORM FOR FETCHING YOU USING
+platform: github
+# YOU CAN SETUP JQ-FILTER BY YOURSELF
+# IT SHOULD BE IN request-fetcher/filters/
+# YOU CAN USE FEW GRAPHQL QUERIES FOR DIFFERENT PULLREQUESTS - SOMETIMES IT'S CONVINIENT
+# IT SHOULD BE IN request-fetcher/queries/
+github:
+  filter: volgarenok_filter.jq
+  queries:
+    merged: volgarenok_merged.graphql
+    open: volgarenok_open.graphql
+gitlab:
+  something: not-imlemented-yet

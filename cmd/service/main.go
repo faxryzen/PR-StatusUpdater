@@ -1,12 +1,16 @@
 package main
 
 import (
-	"os"
 	"log"
+	"os"
+	"strings"
+	"strconv"
 
-	"github.com/joho/godotenv"
 	"github.com/faxryzen/pr-updater/internal/bot"
+	"github.com/joho/godotenv"
 )
+
+const botID = -1003870316764
 
 func main() {
 	err := godotenv.Load()
@@ -16,7 +20,19 @@ func main() {
 	}
 
 	token := os.Getenv("TELEGRAM_BOT_TOKEN")
+	whitelist := os.Getenv("SETTINGS_WHITELIST")
 
-	bot := bot.Init(token, -1003870316764)
+	adminsStr := strings.Split(whitelist, ",")
+	admins := []int64{}
+	for i := range adminsStr {
+		admin, err := strconv.ParseInt(adminsStr[i], 10, 64)
+		if err != nil {
+			log.Fatal("Error parse admins from .env file")
+		}
+		admins = append(admins, admin)
+	}
+	
+
+	bot := bot.Init(token, admins, botID)
 	bot.Run()
 }
