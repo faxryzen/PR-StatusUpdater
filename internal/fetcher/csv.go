@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 func SaveJSONPullReqsAsCSV(filename string) (error) {
@@ -38,7 +39,9 @@ func SaveJSONPullReqsAsCSV(filename string) (error) {
 	for _, pr := range prs {
 		csvScore := "exist"
 		if pr.Score != -1 {
-			csvScore = strconv.Itoa(pr.Score)
+			csvScore = strconv.FormatFloat(pr.Score, 'f', 2, 64)
+			csvScore = strings.TrimRight(csvScore, "0")
+			csvScore = strings.TrimRight(csvScore, ".")
 		}
 		row := []string{
 			strconv.FormatUint(uint64(pr.Number), 10),

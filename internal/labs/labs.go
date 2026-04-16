@@ -20,14 +20,14 @@ type LabsConfig struct {
 
 type Lab struct {
 	ID              string      `json:"id"                 yaml:"id"`
-	BaseScore       int         `json:"base_score"         yaml:"base_score"`
+	BaseScore       float64     `json:"base_score"         yaml:"base_score"`
 
 	DeadlinesAccept []time.Time `json:"dds_acceptance"     yaml:"dds_acceptance"`
-	AcceptScore     int         `json:"acceptance_score"   yaml:"acceptance_score"`
+	AcceptScore     float64     `json:"acceptance_score"   yaml:"acceptance_score"`
 	AcceptDo        string      `json:"acceptance_do"      yaml:"acceptance_do"`
 
 	DeadlinesReady  []time.Time `json:"dds_readiness"      yaml:"dds_readiness"`
-	ReadyScore      int         `json:"readiness_score"    yaml:"readiness_score"`
+	ReadyScore      float64     `json:"readiness_score"    yaml:"readiness_score"`
 	ReadyDo         string      `json:"readiness_do"       yaml:"readiness_do"`
 }
 

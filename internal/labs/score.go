@@ -7,7 +7,7 @@ import (
 	f "github.com/faxryzen/pr-updater/internal/fetcher"
 )
 
-func DoFormula(score int, do string, howMuch int) int {
+func DoFormula(score float64, do string, howMuch float64) float64 {
 	switch do {
 	case "minus":
 		score -= howMuch
@@ -53,14 +53,15 @@ func CalculateScore(pr *f.PullRequest, cfg Lab) {
 	marks := pr.Marks
 
 	for _, mStr := range marks {
-		mInt, err := strconv.Atoi(mStr)
+		mFloat, err := strconv.ParseFloat(mStr, 64)
 
 		if err != nil {
-			panic("there's no way")
-		}
+			pr.Debug += "invalid mark: " + mStr + "; "
+			continue // пропускаем некорректную метку
+    }
 
 		pr.Debug += "accept label: " + mStr + "; "
-		score += mInt
+		score += mFloat
 	}
 
 	if score < 0 {

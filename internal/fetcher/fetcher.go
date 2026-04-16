@@ -101,6 +101,6 @@ type PullRequest struct {
 	Name     string               `json:"name"`
 	Times    map[string]time.Time `json:"times"`
 	Marks    []string             `json:"marks"`
-	Score    int                  `json:"score"`
+	Score    float64              `json:"score"`
 	Debug    string               `json:"debug"`
 }

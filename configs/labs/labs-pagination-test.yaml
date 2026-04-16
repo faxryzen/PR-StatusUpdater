@@ -1,12 +1,14 @@
 labs:
   - id: S7
-    base_score: 5
-    dds_acceptance: []
+    base_score: 6.7
+    dds_acceptance:
+      - '2025-09-01T23:59:00+03:00'
     acceptance_score: 1
     acceptance_do: minus
-    dds_readiness: []
-    readiness_score: 1
-    readiness_do: minus
+    dds_readiness:
+      - '2025-09-08T23:59:00+03:00'
+    readiness_score: 0.5
+    readiness_do: mult
   - id: S5
     base_score: 5
     dds_acceptance: []
