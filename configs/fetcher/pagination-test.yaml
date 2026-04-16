@@ -1,0 +1,8 @@
+
+platform: github
+
+github:
+  filter: volgarenok_filter.jq
+  queries:
+    merged: volgarenok_merged.graphql
+    open: volgarenok_open.graphql

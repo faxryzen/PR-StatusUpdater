@@ -1,10 +1,12 @@
 package fetcher
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
-	"strings"
 )
 
 const (
@@ -23,22 +25,18 @@ type Query struct {
 	Data string
 }
 
-func (g *GitHubPlatform) GetQueries(repo Repository) ([]Query, error) {
+func (g *GitHubPlatform) GetQueries() ([]Query, error) {
 	res := []Query{}
 
 	for name, filename := range g.Queries {
-
 		rawgraph, err := os.ReadFile(queryFilepath + filename)
 		if err != nil {
 			return nil, err
 		}
 
-		data := strings.ReplaceAll(string(rawgraph), "$owner", repo.Auth)
-		data = strings.ReplaceAll(data, "$name", repo.Name)
-
 		res = append(res, Query{
 			Type: name,
-			Data: data,
+			Data: string(rawgraph),
 		})
 	}
 
@@ -46,12 +44,12 @@ func (g *GitHubPlatform) GetQueries(repo Repository) ([]Query, error) {
 }
 
 func (g *GitHubPlatform) GetPullRequests(repo Repository) (map[string][]PullRequest, error) {
-	jqFilter, err := os.ReadFile(filterFilepath + g.Filter)
+	jq, err := os.ReadFile(filterFilepath + g.Filter)
 	if err != nil {
 		return nil, fmt.Errorf("getpullreq failed: %w", err)
 	}
 
-	querys, err := g.GetQueries(repo)
+	querys, err := g.GetQueries()
 	if err != nil {
 		return nil, err
 	}
@@ -59,33 +57,78 @@ func (g *GitHubPlatform) GetPullRequests(repo Repository) (map[string][]PullRequ
 	result := make(map[string][]PullRequest)
 
 	for _, q := range querys {
-
-		pullRequests, err := g.execFetch(q.Data, string(jqFilter))
-		if err != nil {
-			return nil, err
+		var pullRequests []PullRequest
+		var cursor string
+		log.Println("Fetching prs for " + repo.Auth + "/" + repo.Name + " by query: " + q.Type)
+		for {
+			raw, err := g.execFetch(q.Data, string(jq), repo.Auth, repo.Name, cursor)
+			log.Println("+ fetched prs")
+			if err != nil {
+				return nil, err
+			}
+			prs, newcursor, hasNext, err := parseResponse(raw)
+			if err != nil {
+				return nil, err
+			}
+			pullRequests = append(pullRequests, prs...)
+			if !hasNext {
+				break
+			}
+			cursor = newcursor
 		}
-
+		log.Println("Done fetching by query: " + q.Type)
 		result[q.Type] = pullRequests
 	}
 	return result, nil
 }
 
-func (g *GitHubPlatform) execFetch(query string, jqFilter string) ([]PullRequest, error) {
-	cmd := exec.Command(
-		"gh", "api", "graphql",
-		"-f", "query="+query,
-		"--jq", jqFilter)
+func (g *GitHubPlatform) execFetch(query string, jq string, owner, name, cursor string) ([]byte, error) {
+	vars := map[string]any{
+		"owner": owner,
+		"name":  name,
+	}
+	if cursor != "" {
+		vars["cursor"] = cursor
+	}
 
-	out, err := cmd.CombinedOutput()
+	payload := map[string]any{
+		"query":     query,
+		"variables": vars,
+	}
+
+	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(out) == 0 {
-		return nil, nil
+	cmd := exec.Command("gh", "api", "graphql", "--jq", jq, "--input", "-")
+	cmd.Stdin = bytes.NewReader(payloadJSON)
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("gh api failed: %w, output: %s", err, out)
 	}
 
-	return parsePullRequests(out), nil
+	if len(out) == 0 {
+		return []byte("{}"), nil
+	}
+
+	return out, nil
+}
+
+func parseResponse(execOut []byte) ([]PullRequest, string, bool, error) {
+	var result struct {
+		PRs         []PullRequest `json:"prs"`
+		HasNextPage bool          `json:"hasNextPage"`
+		EndCursor   string        `json:"endCursor"`
+	}
+
+	err := json.Unmarshal(execOut, &result)
+	if err != nil {
+		return nil, "", false, fmt.Errorf("parse response failed: %w", err)
+	}
+
+	return result.PRs, result.EndCursor, result.HasNextPage, nil
 }
 
 

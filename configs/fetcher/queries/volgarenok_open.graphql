@@ -1,6 +1,6 @@
-query {
-  repository(owner: "$owner", name: "$name") {
-    pullRequests(states: OPEN, first: 100) {
+query($owner: String!, $name: String!, $cursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequests(states: OPEN, first: 100, after: $cursor) {
       nodes {
         number
         title
@@ -17,6 +17,10 @@ query {
         labels(first: 10) {
           nodes { name }
         }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
       }
     }
   }

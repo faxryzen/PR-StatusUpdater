@@ -1,10 +1,8 @@
 package fetcher
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 	"errors"
 
@@ -105,26 +103,4 @@ type PullRequest struct {
 	Marks    []string             `json:"marks"`
 	Score    int                  `json:"score"`
 	Debug    string               `json:"debug"`
-}
-
-func parsePullRequests(execOut []byte) ([]PullRequest) {
-	var prs []PullRequest
-
-	lines := strings.Split(string(execOut), "\n")
-
-	for _, line := range lines {
-
-		if line == "" {
-			continue
-		}
-
-		var pr PullRequest
-		err := json.Unmarshal([]byte(line), &pr)
-		if err != nil {
-			panic("parse raw prs failed")
-		}
-
-		prs = append(prs, pr)
-	}
-	return prs
 }

@@ -19,3 +19,7 @@
   auth: lets-go-programming-contest
   gist: 7228be14499239f47257cb21db925022
   conf: github-artemii.yaml
+- name: spbspu-labs-2025-aads-a
+  auth: Volgarenok
+  gist: 358f24a8be4ee2ab8cc413de8e3e301f
+  conf: pagination-test.yaml

@@ -1,0 +1,38 @@
+labs:
+  - id: S7
+    base_score: 5
+    dds_acceptance: []
+    acceptance_score: 1
+    acceptance_do: minus
+    dds_readiness: []
+    readiness_score: 1
+    readiness_do: minus
+  - id: S5
+    base_score: 5
+    dds_acceptance: []
+    dds_readiness: []
+  - id: S4
+    base_score: 5
+    dds_acceptance: []
+    dds_readiness: []
+  - id: S2
+    base_score: 5
+    dds_acceptance: []
+    dds_readiness: []
+  - id: S1
+    base_score: 5
+    dds_acceptance: []
+    dds_readiness: []
+  - id: S0
+    base_score: 5
+    dds_acceptance: []
+    dds_readiness: []
+  - id: F0
+    base_score: 5
+    dds_acceptance:
+      - '2024-11-08T23:59:00+03:00'
+    acceptance_score: 100
+    acceptance_do: mult
+    dds_readiness: []
+    readiness_score: 1
+    readiness_do: minus

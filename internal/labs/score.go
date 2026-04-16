@@ -1,10 +1,27 @@
 package labs
 
 import (
+	"log"
 	"strconv"
 
 	f "github.com/faxryzen/pr-updater/internal/fetcher"
 )
+
+func DoFormula(score int, do string, howMuch int) int {
+	switch do {
+	case "minus":
+		score -= howMuch
+	case "mult":
+		score *= howMuch
+	case "div":
+		if howMuch != 0 {
+			score /= howMuch
+		}
+	default:
+		log.Println("Unknown do: " + do)
+	}
+	return score
+}
 
 func CalculateScore(pr *f.PullRequest, cfg Lab) {
 	score := cfg.BaseScore
@@ -14,7 +31,7 @@ func CalculateScore(pr *f.PullRequest, cfg Lab) {
 	for _, deadline := range dds_acc {
 		if pr.Times["created"].After(deadline) {
 			pr.Debug += "dd accept expired; "
-			score--
+			score = DoFormula(score, cfg.AcceptDo, cfg.AcceptScore)
 		}
 	}
 
@@ -29,7 +46,7 @@ func CalculateScore(pr *f.PullRequest, cfg Lab) {
 	for _, deadline := range dds_red {
 		if fineOrMergeTime.After(deadline) {
 			pr.Debug += "dd fine expired; "
-			score--
+			score = DoFormula(score, cfg.ReadyDo, cfg.ReadyScore)
 		}
 	}
 
