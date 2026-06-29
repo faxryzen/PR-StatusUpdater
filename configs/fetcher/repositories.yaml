@@ -1,25 +1,17 @@
 # CFG FOR REPOSITORIES, YOU CAN CHANGE IT MANUAL IDC
-- name: spbspu-anp-2025-5130901-51001
+- name: spbspu-aads-2026-5130901-51001
   auth: Volgarenok
-  gist: 11a908b7a147fe0409ccc61f30031117
+  gist: ea04b92221405b8414765ac216569572
   conf: github-volgarenok.yaml
-- name: spbspu-anp-2025-5130904-50402
+- name: spbspu-aads-2026-5130904-50402
   auth: Volgarenok
-  gist: 2112581e8a19ddefc33fed7c267bda63
+  gist: cb1a72c2bf210eddd289ef0423ca790f
   conf: github-volgarenok.yaml
-- name: spbspu-anp-2025-5130904-50401
+- name: spbspu-aads-2026-5130904-50401
   auth: Volgarenok
-  gist: 0ae91d17a7bf70747c0ecfcd23feec68
+  gist: abc7b38f4c64762cd5170085918d483e
   conf: github-volgarenok.yaml
-- name: spbspu-anp-2025-5130904-50004
+- name: spbspu-aads-2026-5130904-50004
   auth: Volgarenok
-  gist: e4fd103c9f6586e44e6470d6bb5674aa
+  gist: 69e633a75db800d6c94dd42fbd81396a
   conf: github-volgarenok.yaml
-- name: lets-go-programming-v2025-autumn-spbstu-40004
-  auth: lets-go-programming-contest
-  gist: 7228be14499239f47257cb21db925022
-  conf: github-artemii.yaml
-- name: spbspu-labs-2025-aads-a
-  auth: Volgarenok
-  gist: 358f24a8be4ee2ab8cc413de8e3e301f
-  conf: pagination-test.yaml

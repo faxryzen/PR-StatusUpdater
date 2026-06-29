@@ -35,12 +35,12 @@ type Lab struct {
 func LoadDeadlines(cfgFetcher string) (map[string]Lab, error) {
 	data, err := os.ReadFile(configFilepath + "labs-" + cfgFetcher)
 	if err != nil {
-			return nil, err
+		return nil, err
 	}
 
 	var cfg LabsConfig
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-			return nil, err
+		return nil, err
 	}
 
 	labs := make(map[string]Lab)

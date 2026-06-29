@@ -30,3 +30,19 @@ labs:
     dds_acceptance:
       - '2025-12-26T23:59:00+03:00'
     dds_readiness: []
+  - id: S1
+    base_score: 0
+    dds_acceptance: []
+    dds_readiness: []
+  - id: S2
+    base_score: 0
+    dds_acceptance: []
+    dds_readiness: []
+  - id: S3
+    base_score: 0
+    dds_acceptance: []
+    dds_readiness: []
+  - id: S4
+    base_score: 0
+    dds_acceptance: []
+    dds_readiness: []
