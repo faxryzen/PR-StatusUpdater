@@ -29,17 +29,17 @@ func FetchLabsToJSON(repo f.Repository) ([]byte, error) {
 	openPRsFixed :=   []f.PullRequest{}
 
 	for i := range mergedPRs {
-		lab_cfg, exist := labs[openPRs[i].Name]
+		labCfg, exist := labs[mergedPRs[i].Name]
 		if exist {
-			CalculateScore(&mergedPRs[i], lab_cfg)
+			CalculateScore(&mergedPRs[i], labCfg)
 			mergedPRsFixed = append(mergedPRsFixed, mergedPRs[i])
 		}
 	}
 
 	for i := range openPRs {
-		lab_cfg, exist := labs[openPRs[i].Name]
+		_, exist := labs[openPRs[i].Name]
 		if exist {
-			CalculateScore(&openPRs[i], lab_cfg)
+			// dont calculate for 'exist' value
 			openPRsFixed = append(openPRsFixed, openPRs[i])
 		}
 	}

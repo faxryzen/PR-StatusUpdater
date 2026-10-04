@@ -1,29 +1,37 @@
 # CFG FOR REPOSITORIES, YOU CAN CHANGE IT MANUAL IDC
-- name: spbspu-aads-2026-5130901-51001
-  auth: Volgarenok
-  gist: ea04b92221405b8414765ac216569572
+- name: spbspu-aap-2026-5130904-60001
+  auth: Ksenia-rgb
+  gist: cc00757e5ec5f8aec28caed1f17df839
   conf: github-volgarenok.yaml
-- name: spbspu-aads-2026-5130904-50402
-  auth: Volgarenok
-  gist: cb1a72c2bf210eddd289ef0423ca790f
+- name: spbspu-aap-2026-5130904-60002
+  auth: Ksenia-rgb
+  gist: c46bb253fe36242cad9db2f6b262b1c6
   conf: github-volgarenok.yaml
-- name: spbspu-aads-2026-5130904-50401
-  auth: Volgarenok
-  gist: abc7b38f4c64762cd5170085918d483e
+- name: spbspu-aap-2026-5130904-60003
+  auth: Ksenia-rgb
+  gist: 9833d0e1e8edcd73e57581d80fffbbb6
   conf: github-volgarenok.yaml
-- name: spbspu-aads-2026-5130904-50004
-  auth: Volgarenok
-  gist: 69e633a75db800d6c94dd42fbd81396a
+- name: spbspu-aap-2026-5130904-60004
+  auth: Ksenia-rgb
+  gist: 21013d2bf5433a8d2f5f3ee43c392115
   conf: github-volgarenok.yaml
-- name: spbspu-tp-2026-5130904-50004
-  auth: Volgarenok
-  gist: 8cef73f4c8e0417f7e290188782f91df
+- name: spbspu-aap-2026-5130904-60005
+  auth: Ksenia-rgb
+  gist: 6f65a9acb49db0dc4d5455e341b490af
   conf: github-volgarenok.yaml
-- name: spbspu-tp-2026-5130904-50401
-  auth: Volgarenok
-  gist: 7602e0a391377f223ca5588a89eea94d
+- name: spbspu-aap-2026-5130904-60006
+  auth: Ksenia-rgb
+  gist: 1783d1ff66c7db30fc4d342162fcaea8
   conf: github-volgarenok.yaml
-- name: spbspu-tp-2026-5130904-50402
-  auth: Volgarenok
-  gist: 193e8a90518fdd1140c09c4fac1d6b43
+- name: spbspu-aap-2026-5130904-60007
+  auth: Ksenia-rgb
+  gist: 3ced1c45d8ed84601b671a43537b4227
+  conf: github-volgarenok.yaml
+- name: spbspu-aap-2026-5130904-60008
+  auth: Ksenia-rgb
+  gist: f978ab72b862803f9230fb0e4645d259
+  conf: github-volgarenok.yaml
+- name: spbspu-aap-2026-5130904-60009
+  auth: Ksenia-rgb
+  gist: 2a9888be1363bde450d9dad8d923102b
   conf: github-volgarenok.yaml

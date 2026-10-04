@@ -19,16 +19,16 @@ type LabsConfig struct {
 }
 
 type Lab struct {
-	ID              string      `json:"id"                 yaml:"id"`
-	BaseScore       float64     `json:"base_score"         yaml:"base_score"`
+	ID              string      `json:"id"                yaml:"id"`
+	BaseScore       float64     `json:"base_score"        yaml:"base_score"`
 
-	DeadlinesAccept []time.Time `json:"dds_acceptance"     yaml:"dds_acceptance"`
-	AcceptScore     float64     `json:"acceptance_score"   yaml:"acceptance_score"`
-	AcceptDo        string      `json:"acceptance_do"      yaml:"acceptance_do"`
+	DeadlinesCreate []time.Time `json:"dds_creation"      yaml:"dds_creation"`
+	CreateScore     float64     `json:"creation_score"    yaml:"creation_score"`
+	CreateDo        string      `json:"creation_do"       yaml:"creation_do"`
 
-	DeadlinesReady  []time.Time `json:"dds_readiness"      yaml:"dds_readiness"`
-	ReadyScore      float64     `json:"readiness_score"    yaml:"readiness_score"`
-	ReadyDo         string      `json:"readiness_do"       yaml:"readiness_do"`
+	DeadlinesReady  []time.Time `json:"dds_readiness"     yaml:"dds_readiness"`
+	ReadyScore      float64     `json:"readiness_score"   yaml:"readiness_score"`
+	ReadyDo         string      `json:"readiness_do"      yaml:"readiness_do"`
 }
 
 // Returns Lab by name (from labs-<cfg-fetcher-name>.yaml)
@@ -53,12 +53,12 @@ func LoadDeadlines(cfgFetcher string) (map[string]Lab, error) {
 }
 
 func applyDefaults(lab *Lab) {
-	if len(lab.DeadlinesAccept) > 0 {
-		if lab.AcceptScore == 0 {
-			lab.AcceptScore = 1
+	if len(lab.DeadlinesCreate) > 0 {
+		if lab.CreateScore == 0 {
+			lab.CreateScore = 1
 		}
-		if lab.AcceptDo == "" {
-			lab.AcceptDo = "minus"
+		if lab.CreateDo == "" {
+			lab.CreateDo = "minus"
 		}
 	}
 

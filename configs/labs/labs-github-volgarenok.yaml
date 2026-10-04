@@ -1,33 +1,33 @@
 labs:
-  - id: S1
-    base_score: 0
-    dds_acceptance: []
+  - id: P0
+    base_score: 6
+    dds_creation: []
     dds_readiness: []
-  - id: S2
-    base_score: 0
-    dds_acceptance: []
+  - id: P1
+    base_score: 6
+    dds_creation:
+      - '2026-10-11T23:59:00+03:00'
+      - '2026-10-18T23:59:00+03:00'
+      - '2026-10-25T23:59:00+03:00'
+      - '2026-11-01T23:59:00+03:00'
+      - '2026-11-08T23:59:00+03:00'
+      - '2026-11-15T23:59:00+03:00'
+    creation_score: 1
+    creation_do: minus
     dds_readiness: []
-  - id: S3
-    base_score: 0
-    dds_acceptance: []
+  - id: P3
+    base_score: 6
+    dds_creation: []
     dds_readiness: []
-  - id: S4
-    base_score: 0
-    dds_acceptance: []
+  - id: P4
+    base_score: 6
+    dds_creation: []
+    dds_readiness: []
+  - id: P6
+    base_score: 6
+    dds_creation: []
     dds_readiness: []
   - id: T1
-    base_score: 0
-    dds_acceptance: []
-    dds_readiness: []
-  - id: T2
-    base_score: 0
-    dds_acceptance: []
-    dds_readiness: []
-  - id: T3
-    base_score: 0
-    dds_acceptance: []
-    dds_readiness: []
-  - id: T4
-    base_score: 0
-    dds_acceptance: []
+    base_score: 6
+    dds_creation: []
     dds_readiness: []

@@ -25,13 +25,13 @@ func DoFormula(score float64, do string, howMuch float64) float64 {
 
 func CalculateScore(pr *f.PullRequest, cfg Lab) {
 	score := cfg.BaseScore
-	dds_acc := cfg.DeadlinesAccept
+	dds_crt := cfg.DeadlinesCreate
 	dds_red := cfg.DeadlinesReady
 
-	for _, deadline := range dds_acc {
+	for _, deadline := range dds_crt {
 		if pr.Times["created"].After(deadline) {
-			pr.Debug += "dd accept expired; "
-			score = DoFormula(score, cfg.AcceptDo, cfg.AcceptScore)
+			pr.Debug += "dd creation expired; "
+			score = DoFormula(score, cfg.CreateDo, cfg.CreateScore)
 		}
 	}
 
@@ -57,8 +57,8 @@ func CalculateScore(pr *f.PullRequest, cfg Lab) {
 
 		if err != nil {
 			pr.Debug += "invalid mark: " + mStr + "; "
-			continue // пропускаем некорректную метку
-    }
+			continue
+	}
 
 		pr.Debug += "accept label: " + mStr + "; "
 		score += mFloat
